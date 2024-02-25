@@ -1,12 +1,13 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import { nanoid } from 'nanoid';
 import { ContactForm } from './ContactForm/ContactForm';
 import { ContactList } from './ContactList/ContactList';
 import { Filter } from './Filter/Filter';
 
-export class App extends Component {
-  // Оголошуємо стан застосунку з трьома властивостями: good, neutral і bad
-  state = {
+// Кореневий компонент застосунку
+const App = () => {
+  // Оголошуємо стан застосунку з трьома властивостями: contacts, filter і name
+  const [state, setState] = useState({
     contacts: [
       { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
       { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
@@ -15,14 +16,36 @@ export class App extends Component {
     ],
     filter: '',
     name: '',
-    number: '',
-  };
+  });
+
+  // Додаємо useEffect для збереження контактів у локальному сховищі
+  useEffect(() => {
+    // Отримуємо контакти з локального сховища, якщо вони там є
+    const savedContacts = localStorage.getItem('contacts');
+    // Парсимо контакти у форматі JSON
+    const parsedContacts = JSON.parse(savedContacts);
+    // Оновлюємо стан застосунку, якщо контакти не порожні
+    if (parsedContacts) {
+      setState(prevState => ({
+        ...prevState,
+        contacts: parsedContacts,
+      }));
+    }
+  }, []); // Передаємо порожній масив, щоб запустити useEffect тільки при першому рендері
+
+  // Додаємо useEffect для оновлення локального сховища при зміні контактів
+  useEffect(() => {
+    // Серіалізуємо контакти у форматі JSON
+    const stringifiedContacts = JSON.stringify(state.contacts);
+    // Зберігаємо контакти у локальному сховищі
+    localStorage.setItem('contacts', stringifiedContacts);
+  }, [state.contacts]); // Передаємо масив з контактами, щоб запустити useEffect при зміні контактів
 
   // Функція для додавання нового контакту
-  addContact = contacts => {
+  const addContact = contacts => {
     const { name, number } = contacts;
     // Перевіряємо, чи ім'я контакту вже присутнє у телефонній книзі
-    const isNameExist = this.state.contacts.some(
+    const isNameExist = state.contacts.some(
       contact => contact.name.toUpperCase() === name.toUpperCase()
     );
 
@@ -39,48 +62,32 @@ export class App extends Component {
     };
 
     // Оновлюємо стан застосунку, додаючи новий контакт до масиву contacts
-    this.setState(prevState => {
+    setState(prevState => {
       // console.log('prevState:', prevState);
-      return { contacts: [...prevState.contacts, newContact] };
+      return { ...prevState, contacts: [...prevState.contacts, newContact] };
     });
   };
 
-  //   const { name } = data;
-
-  //   const isExist = this.state.contacts.some(
-  //     contact => contact.name.toUpperCase() === name.toUpperCase()
-  //   );
-
-  //   if (isExist) {
-  //     alert(`${name} is already in contacts.`);
-  //     return;
-  //   }
-  //   this.setState(prevState => {
-  //     return {
-  //       contacts: [...prevState.contacts, { id: nanoid(), ...data }],
-  //     };
-  //   });
-  // };
   // Функція для видалення контакту за ідентифікатором
-  deleteContact = id => {
+  const deleteContact = id => {
     // Оновлюємо стан застосунку, видаляючи контакт з масиву contacts
-    this.setState(prevState => ({
+    setState(prevState => ({
       ...prevState,
       contacts: prevState.contacts.filter(contact => contact.id !== id),
     }));
   };
 
   // Функція для обробки зміни значення поля пошуку
-  handleFilterChange = event => {
-    this.setState(prevState => ({
+  const handleFilterChange = event => {
+    setState(prevState => ({
       ...prevState,
       filter: event.target.value,
     }));
   };
 
   // Функція для фільтрації контактів за ім'ям
-  getFilteredContacts = () => {
-    const { contacts, filter } = this.state;
+  const getFilteredContacts = () => {
+    const { contacts, filter } = state;
     console.log(contacts);
     const normalizedFilter = filter.toLowerCase(); // Нормалізуємо значення поля пошуку до нижнього регістру
     return contacts.filter(
@@ -88,17 +95,14 @@ export class App extends Component {
     );
   };
 
-  render() {
-    return (
-      <div className="App">
-        <h1>Phone book</h1>
-        <ContactForm setContacts={this.addContact} />
-        <Filter value={this.state.filter} onChange={this.handleFilterChange} />
-        <ContactList
-          contacts={this.getFilteredContacts()}
-          onDelete={this.deleteContact}
-        />
-      </div>
-    );
-  }
-}
+  return (
+    <div className="App">
+      <h1>Phone book</h1>
+      <ContactForm setContacts={addContact} />
+      <Filter value={state.filter} onChange={handleFilterChange} />
+      <ContactList contacts={getFilteredContacts()} onDelete={deleteContact} />
+    </div>
+  );
+};
+
+export default App;
